@@ -11,18 +11,35 @@ var LocalStorageStore = EO.Store.extend({
 });
 
 export default {
-	name: 'injectStore',
-	initialize: function(container, application) {
-		Orbit.Promise = Ember.RSVP.Promise;
-		application.register('schema:main', EO.Schema);
+  name: 'injectStore',
+  initialize: function(container, application) {
+    Orbit.Promise = Ember.RSVP.Promise;
+    application.register('schema:main', EO.Schema);
 
-		//// default InMemoryStore ////
-		// application.register('store:main', EO.Store);
+    application.register('store:main', EO.Store);
+    application.register('store:localStorage', LocalStorageStore);
+    application.inject('controller', 'store', 'store:main');
+    application.inject('route', 'store', 'store:main');
 
-		//// LocalStorageStore ///
-		application.register('store:main', LocalStorageStore);
+    var memorySource = container.lookup('store:main').orbitSource;
+    var localStorageSource = container.lookup('store:localStorage').orbitSource;
 
-		application.inject('controller', 'store', 'store:main');
-		application.inject('route', 'store', 'store:main');
-	}
+    // Warm the cache of the memory store from local storage
+    memorySource.reset(localStorageSource.retrieve());
+
+    // Connect MemorySource -> LocalStorageSource (using default blocking
+    // strategy)
+    new Orbit.TransformConnector(memorySource, localStorageSource);
+    new Orbit.TransformConnector(localStorageSource, memorySource);
+
+    memorySource.on('rescueFind', localStorageSource.find);
+
+    // Log transforms
+    memorySource.on('didTransform', function(operation) {
+      console.log('[ORBIT.JS] [memory]', operation);
+    });
+    localStorageSource.on('didTransform', function(operation) {
+      console.log('[ORBIT.JS] [local]', operation);
+    });
+  }
 };
