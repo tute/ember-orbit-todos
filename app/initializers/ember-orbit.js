@@ -25,7 +25,8 @@ export default {
     var localStorageSource = container.lookup('store:localStorage').orbitSource;
 
     // Warm the cache of the memory store from local storage
-    memorySource.reset(localStorageSource.retrieve());
+    // FIXME: Uncomenting this line interferes with TransformConnectors.
+    // memorySource.reset(localStorageSource.retrieve());
 
     // Connect MemorySource -> LocalStorageSource (using default blocking
     // strategy)
